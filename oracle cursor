@@ -1,0 +1,932 @@
+https://www.cnblogs.com/xiaoliu66007/p/7495753.html  ##详细的游标文档
+
+返回主页	
+君子笑而不语
+
+    博客园
+    首页
+    新随笔
+    联系
+    管理
+
+随笔 - 357  文章 - 0  评论 - 19
+oracle中游标详细用法
+
+转自：http://blog.csdn.net/liyong199012/article/details/8948952
+
+游标的概念: 
+    游标是SQL的一个内存工作区，由系统或用户以变量的形式定义。游标的作用就是用于临时存储从数据库中提取的数据块。在某些情况下，需要把数据从存放在磁盘的表中调到计算机内存中进行处理，最后将处理结果显示出来或最终写回数据库。这样数据处理的速度才会提高，否则频繁的磁盘数据交换会降低效率。 
+游标有两种类型：显式游标和隐式游标。在前述程序中用到的SELECT...INTO...查询语句，一次只能从数据库中提取一行数据，对于这种形式的查询和DML操作，系统都会使用一个隐式游标。但是如果要提取多行数据，就要由程序员定义一个显式游标，并通过与游标有关的语句进行处理。显式游标对应一个返回结果为多行多列的SELECT语句。 
+游标一旦打开，数据就从数据库中传送到游标变量中，然后应用程序再从游标变量中分解出需要的数据，并进行处理。 
+隐式游标 
+如前所述，DML操作和单行SELECT语句会使用隐式游标，它们是： 
+* 插入操作：INSERT。 
+* 更新操作：UPDATE。 
+* 删除操作：DELETE。 
+* 单行查询操作：SELECT ... INTO ...。 
+当系统使用一个隐式游标时，可以通过隐式游标的属性来了解操作的状态和结果，进而控制程序的流程。隐式游标可以使用名字SQL来访问，但要注意，通过SQL游标名总是只能访问前一个DML操作或单行SELECT操作的游标属性。所以通常在刚刚执行完操作之后，立即使用SQL游标名来访问属性。游标的属性有四种，如下所示。 
+Sql代码 
+
+    隐式游标的属性 返回值类型   意    义   
+    SQL%ROWCOUNT    整型  代表DML语句成功执行的数据行数   
+    SQL%FOUND   布尔型 值为TRUE代表插入、删除、更新或单行查询操作成功   
+    SQL%NOTFOUND    布尔型 与SQL%FOUND属性返回值相反   
+    SQL%ISOPEN  布尔型 DML执行过程中为真，结束后为假  
+
+
+【训练1】　使用隐式游标的属性，判断对雇员工资的修改是否成功。 
+步骤1：输入和运行以下程序： 
+Sql代码 
+
+    SET SERVEROUTPUT ON    
+            BEGIN  
+            UPDATE emp SET sal=sal+100 WHERE empno=1234;   
+             IF SQL%FOUND THEN    
+            DBMS_OUTPUT.PUT_LINE('成功修改雇员工资！');   
+            COMMIT;    
+            ELSE  
+            DBMS_OUTPUT.PUT_LINE('修改雇员工资失败！');   
+             END IF;    
+            END;  
+
+
+运行结果为： 
+Sql代码 
+
+    修改雇员工资失败！   
+            PL/SQL 过程已成功完成。  
+
+
+步骤2：将雇员编号1234改为7788，重新执行以上程序： 
+运行结果为： 
+Sql代码 
+
+    成功修改雇员工资！   
+            PL/SQL 过程已成功完成。  
+
+
+说明：本例中，通过SQL%FOUND属性判断修改是否成功，并给出相应信息。 
+显式游标 
+游标的定义和操作 
+游标的使用分成以下4个步骤。 
+1．声明游标 
+在DECLEAR部分按以下格式声明游标： 
+CURSOR 游标名[(参数1 数据类型[，参数2 数据类型...])] 
+IS SELECT语句; 
+参数是可选部分，所定义的参数可以出现在SELECT语句的WHERE子句中。如果定义了参数，则必须在打开游标时传递相应的实际参数。 
+SELECT语句是对表或视图的查询语句，甚至也可以是联合查询。可以带WHERE条件、ORDER BY或GROUP BY等子句，但不能使用INTO子句。在SELECT语句中可以使用在定义游标之前定义的变量。 
+2．打开游标 
+在可执行部分，按以下格式打开游标： 
+OPEN 游标名[(实际参数1[，实际参数2...])]; 
+打开游标时，SELECT语句的查询结果就被传送到了游标工作区。 
+3．提取数据 
+在可执行部分，按以下格式将游标工作区中的数据取到变量中。提取操作必须在打开游标之后进行。 
+FETCH 游标名 INTO 变量名1[，变量名2...]; 
+或 
+FETCH 游标名 INTO 记录变量; 
+游标打开后有一个指针指向数据区，FETCH语句一次返回指针所指的一行数据，要返回多行需重复执行，可以使用循环语句来实现。控制循环可以通过判断游标的属性来进行。 
+下面对这两种格式进行说明： 
+第一种格式中的变量名是用来从游标中接收数据的变量，需要事先定义。变量的个数和类型应与SELECT语句中的字段变量的个数和类型一致。 
+第二种格式一次将一行数据取到记录变量中，需要使用%ROWTYPE事先定义记录变量，这种形式使用起来比较方便，不必分别定义和使用多个变量。 
+定义记录变量的方法如下： 
+变量名 表名|游标名%ROWTYPE； 
+其中的表必须存在，游标名也必须先定义。 
+4．关闭游标 
+CLOSE 游标名; 
+显式游标打开后，必须显式地关闭。游标一旦关闭，游标占用的资源就被释放，游标变成无效，必须重新打开才能使用。 
+以下是使用显式游标的一个简单练习。 
+【训练1】  用游标提取emp表中7788雇员的名称和职务。 
+Sql代码 
+
+    SET SERVEROUTPUT ON  
+            DECLARE    
+             v_ename VARCHAR2(10);   
+             v_job VARCHAR2(10);   
+             CURSOR emp_cursor IS    
+             SELECT ename,job FROM emp WHERE empno=7788;   
+             BEGIN  
+         OPEN emp_cursor;   
+        FETCH emp_cursor INTO v_ename,v_job;   
+            DBMS_OUTPUT.PUT_LINE(v_ename||','||v_job);   
+            CLOSE emp_cursor;   
+            END;  
+
+
+执行结果为: 
+Sql代码 
+
+    SCOTT,ANALYST   
+            PL/SQL 过程已成功完成。   
+
+
+说明：该程序通过定义游标emp_cursor，提取并显示雇员7788的名称和职务。 
+作为对以上例子的改进，在以下训练中采用了记录变量。 
+【训练2】  用游标提取emp表中7788雇员的姓名、职务和工资。 
+Sql代码 
+
+    SET SERVEROUTPUT ON  
+            DECLARE  
+             CURSOR emp_cursor IS  SELECT ename,job,sal FROM emp WHERE empno=7788;   
+             emp_record emp_cursor%ROWTYPE;   
+            BEGIN  
+    OPEN emp_cursor;       
+            FETCH emp_cursor INTO emp_record;   
+               DBMS_OUTPUT.PUT_LINE(emp_record.ename||','|| emp_record.job||','|| emp_record.sal);   
+             CLOSE emp_cursor;   
+            END;  
+
+
+执行结果为: 
+Sql代码 
+
+    SCOTT,ANALYST,3000   
+            PL/SQL 过程已成功完成。   
+
+
+说明：实例中使用记录变量来接收数据，记录变量由游标变量定义，需要出现在游标定义之后。 
+注意：可通过以下形式获得记录变量的内容： 
+记录变量名.字段名。 
+【训练3】  显示工资最高的前3名雇员的名称和工资。 
+Sql代码 
+
+    SET SERVEROUTPUT ON  
+            DECLARE  
+             V_ename VARCHAR2(10);   
+            V_sal NUMBER(5);   
+            CURSOR emp_cursor IS  SELECT ename,sal FROM emp ORDER BY sal DESC;   
+            BEGIN  
+             OPEN emp_cursor;   
+             FOR I IN 1..3 LOOP   
+               FETCH emp_cursor INTO v_ename,v_sal;   
+             DBMS_OUTPUT.PUT_LINE(v_ename||','||v_sal);   
+              END LOOP;   
+             CLOSE emp_cursor;   
+             END;  
+
+
+执行结果为: 
+Sql代码 
+
+    KING,5000   
+         SCOTT,3000   
+         FORD,3000   
+         PL/SQL 过程已成功完成。  
+
+
+  说明：该程序在游标定义中使用了ORDER BY子句进行排序，并使用循环语句来提取多行数据。 
+游标循环 
+【训练1】  使用特殊的FOR循环形式显示全部雇员的编号和名称。 
+Sql代码 
+
+    SET SERVEROUTPUT ON  
+    DECLARE  
+      CURSOR emp_cursor IS    
+      SELECT empno, ename FROM emp;   
+    BEGIN  
+    FOR Emp_record IN emp_cursor LOOP      
+        DBMS_OUTPUT.PUT_LINE(Emp_record.empno|| Emp_record.ename);   
+        END LOOP;   
+        END;  
+
+
+执行结果为： 
+Sql代码 
+
+    7369SMITH   
+    7499ALLEN   
+    7521WARD   
+    7566JONES   
+             PL/SQL 过程已成功完成。  
+
+
+  说明：可以看到该循环形式非常简单，隐含了记录变量的定义、游标的打开、提取和关闭过程。Emp_record为隐含定义的记录变量，循环的执行次数与游标取得的数据的行数相一致。 
+【训练2】  另一种形式的游标循环。 
+Sql代码 
+
+    SET SERVEROUTPUT ON    
+    BEGIN  
+     FOR re IN (SELECT ename FROM EMP)  LOOP   
+      DBMS_OUTPUT.PUT_LINE(re.ename)   
+     END LOOP;   
+    END;  
+
+
+执行结果为： 
+Sql代码 
+
+    SMITH   
+    ALLEN   
+    WARD   
+    JONES  
+
+
+    说明：该种形式更为简单，省略了游标的定义，游标的SELECT查询语句在循环中直接出现。 
+显式游标属性 
+虽然可以使用前面的形式获得游标数据，但是在游标定义以后使用它的一些属性来进行结构控制是一种更为灵活的方法。显式游标的属性如下所示。 
+Sql代码 
+
+    游标的属性   返回值类型   意    义   
+    %ROWCOUNT   整型  获得FETCH语句返回的数据行数   
+    %FOUND  布尔型 最近的FETCH语句返回一行数据则为真，否则为假   
+    %NOTFOUND   布尔型 与%FOUND属性返回值相反   
+    %ISOPEN 布尔型 游标已经打开时值为真，否则为假  
+
+
+可按照以下形式取得游标的属性： 
+游标名%属性 
+要判断游标emp_cursor是否处于打开状态，可以使用属性emp_cursor%ISOPEN。如果游标已经打开，则返回值为“真”，否则为“假”。具体可参照以下的训练。 
+【训练1】  使用游标的属性练习。 
+Sql代码 
+
+    SET SERVEROUTPUT ON  
+    DECLARE  
+      V_ename VARCHAR2(10);   
+      CURSOR emp_cursor IS    
+      SELECT ename FROM emp;   
+    BEGIN  
+     OPEN emp_cursor;   
+     IF emp_cursor%ISOPEN THEN  
+    LOOP   
+       FETCH emp_cursor INTO v_ename;   
+       EXIT WHEN emp_cursor%NOTFOUND;   
+       DBMS_OUTPUT.PUT_LINE(to_char(emp_cursor%ROWCOUNT)||'-'||v_ename);   
+      END LOOP;   
+     ELSE  
+      DBMS_OUTPUT.PUT_LINE('用户信息：游标没有打开！');   
+     END IF;   
+     CLOSE  emp_cursor;   
+    END;  
+
+
+执行结果为： 
+Sql代码 
+
+    1-SMITH   
+    2-ALLEN   
+    3-WARD   
+     PL/SQL 过程已成功完成。  
+
+
+    说明：本例使用emp_cursor%ISOPEN判断游标是否打开；使用emp_cursor%ROWCOUNT获得到目前为止FETCH语句返回的数据行数并输出；使用循环来获取数据，在循环体中使用FETCH语句；使用emp_cursor%NOTFOUND判断FETCH语句是否成功执行，当FETCH语句失败时说明数据已经取完，退出循环。 
+【练习1】去掉OPEN emp_cursor;语句，重新执行以上程序。 
+游标参数的传递 
+ 【训练1】  带参数的游标。 
+Sql代码 
+
+    SET SERVEROUTPUT ON  
+            DECLARE  
+                V_empno NUMBER(5);   
+                V_ename VARCHAR2(10);   
+                CURSOR  emp_cursor(p_deptno NUMBER,     p_job VARCHAR2) IS  
+                SELECT  empno, ename FROM emp   
+                WHERE   deptno = p_deptno AND job = p_job;   
+    BEGIN  
+         OPEN emp_cursor(10, 'CLERK');   
+        LOOP   
+         FETCH emp_cursor INTO v_empno,v_ename;   
+         EXIT WHEN emp_cursor%NOTFOUND;   
+         DBMS_OUTPUT.PUT_LINE(v_empno||','||v_ename);   
+          END LOOP;   
+        END;  
+
+
+执行结果为： 
+Sql代码 
+
+    7934,MILLER   
+            PL/SQL 过程已成功完成。  
+
+
+说明：游标emp_cursor定义了两个参数：p_deptno代表部门编号，p_job代表职务。语句OPEN emp_cursor(10, 'CLERK')传递了两个参数值给游标，即部门为10、职务为CLERK，所以游标查询的内容是部门10的职务为CLERK的雇员。循环部分用于显示查询的内容。 
+【练习1】修改Open语句的参数：部门号为20、职务为ANALYST，并重新执行。 
+也可以通过变量向游标传递参数，但变量需要先于游标定义，并在游标打开之前赋值。对以上例子重新改动如下： 
+  【训练2】  通过变量传递参数给游标。 
+Sql代码 
+
+    SET SERVEROUTPUT ON  
+            DECLARE  
+            v_empno NUMBER(5);   
+            v_ename VARCHAR2(10);   
+            v_deptno NUMBER(5);   
+    v_job VARCHAR2(10);   
+             CURSOR emp_cursor IS  
+                SELECT empno, ename FROM emp   
+                WHERE   deptno = v_deptno AND job = v_job;   
+            BEGIN  
+             v_deptno:=10;   
+             v_job:='CLERK';   
+             OPEN emp_cursor;   
+            LOOP   
+             FETCH emp_cursor INTO v_empno,v_ename;   
+               EXIT WHEN emp_cursor%NOTFOUND;   
+    DBMS_OUTPUT.PUT_LINE(v_empno||','||v_ename);   
+             END LOOP;   
+            END;  
+
+
+执行结果为： 
+Sql代码 
+
+    7934,MILLER   
+            PL/SQL 过程已成功完成。  
+
+
+说明：该程序与前一程序实现相同的功能。 
+动态SELECT语句和动态游标的用法 
+Oracle支持动态SELECT语句和动态游标，动态的方法大大扩展了程序设计的能力。 
+对于查询结果为一行的SELECT语句，可以用动态生成查询语句字符串的方法，在程序执行阶段临时地生成并执行，语法是： 
+execute immediate 查询语句字符串 into 变量1[,变量2...]; 
+以下是一个动态生成SELECT语句的例子。 
+【训练1】  动态SELECT查询。 
+Sql代码 
+
+    SET SERVEROUTPUT ON    
+            DECLARE    
+            str varchar2(100);   
+            v_ename varchar2(10);   
+            begin  
+            str:='select ename from scott.emp where empno=7788';   
+            execute immediate str into v_ename;    
+            dbms_output.put_line(v_ename);   
+            END;   
+
+
+执行结果为： 
+Sql代码 
+
+    SCOTT   
+            PL/SQL 过程已成功完成。  
+
+
+说明：SELECT...INTO...语句存放在STR字符串中，通过EXECUTE语句执行。 
+在变量声明部分定义的游标是静态的，不能在程序运行过程中修改。虽然可以通过参数传递来取得不同的数据，但还是有很大的局限性。通过采用动态游标，可以在程序运行阶段随时生成一个查询语句作为游标。要使用动态游标需要先定义一个游标类型，然后声明一个游标变量，游标对应的查询语句可以在程序的执行过程中动态地说明。 
+定义游标类型的语句如下： 
+TYPE 游标类型名 REF CURSOR; 
+声明游标变量的语句如下： 
+游标变量名 游标类型名; 
+在可执行部分可以如下形式打开一个动态游标： 
+OPEN 游标变量名 FOR 查询语句字符串; 
+【训练2】  按名字中包含的字母顺序分组显示雇员信息。 
+输入并运行以下程序： 
+Sql代码 
+
+    declare    
+     type cur_type is ref cursor;   
+     cur cur_type;   
+     rec scott.emp%rowtype;   
+     str varchar2(50);   
+     letter char:= 'A';   
+    begin  
+            loop           
+             str:= 'select ename from emp where ename like ''%'||letter||'%''';   
+             open cur for str;   
+             dbms_output.put_line('包含字母'||letter||'的名字：');   
+              loop   
+             fetch cur into rec.ename;   
+             exit when cur%notfound;   
+            dbms_output.put_line(rec.ename);   
+    end loop;   
+      exit when letter='Z';   
+      letter:=chr(ascii(letter)+1);   
+     end loop;   
+    end;  
+
+
+运行结果为： 
+Sql代码 
+
+    包含字母A的名字：   
+    ALLEN   
+    WARD   
+    MARTIN   
+    BLAKE   
+    CLARK   
+    ADAMS   
+    JAMES   
+    包含字母B的名字：   
+    BLAKE   
+    包含字母C的名字：   
+    CLARK   
+    SCOTT  
+
+
+说明：使用了二重循环，在外循环体中，动态生成游标的SELECT语句，然后打开。通过语句letter:=chr(ascii(letter)+1)可获得字母表中的下一个字母。 
+
+异常处理 
+错误处理 
+错误处理部分位于程序的可执行部分之后，是由WHEN语句引导的多个分支构成的。错误处理的语法如下： 
+EXCEPTION 
+WHEN 错误1[OR 错误2] THEN 
+语句序列1； 
+WHEN 错误3[OR 错误4] THEN 
+语句序列2； 
+WHEN OTHERS 
+语句序列n； 
+END; 
+其中： 
+错误是在标准包中由系统预定义的标准错误，或是由用户在程序的说明部分自定义的错误，参见下一节系统预定义的错误类型。 
+语句序列就是不同分支的错误处理部分。 
+凡是出现在WHEN后面的错误都是可以捕捉到的错误，其他未被捕捉到的错误，将在WHEN OTHERS部分进行统一处理，OTHENS必须是EXCEPTION部分的最后一个错误处理分支。如要在该分支中进一步判断错误种类，可以通过使用预定义函数SQLCODE( )和SQLERRM( )来获得系统错误号和错误信息。 
+如果在程序的子块中发生了错误，但子块没有错误处理部分，则错误会传递到主程序中。 
+下面是由于查询编号错误而引起系统预定义异常的例子。 
+【训练1】  查询编号为1234的雇员名字。 
+Sql代码 
+
+    SET SERVEROUTPUT ON  
+    DECLARE  
+    v_name VARCHAR2(10);   
+    BEGIN  
+       SELECT   ename   
+       INTO     v_name   
+       FROM     emp   
+       WHERE    empno = 1234;   
+    DBMS_OUTPUT.PUT_LINE('该雇员名字为：'|| v_name);   
+    EXCEPTION   
+      WHEN NO_DATA_FOUND THEN  
+        DBMS_OUTPUT.PUT_LINE('编号错误，没有找到相应雇员！');   
+      WHEN OTHERS THEN  
+        DBMS_OUTPUT.PUT_LINE('发生其他错误！');   
+    END;  
+
+
+执行结果为： 
+Sql代码 
+
+    编号错误，没有找到相应雇员！   
+            PL/SQL 过程已成功完成。  
+
+
+说明：在以上查询中，因为编号为1234的雇员不存在，所以将发生类型为“NO_DATA_ 
+FOUND”的异常。“NO_DATA_FOUND”是系统预定义的错误类型，EXCEPTION部分下的WHEN语句将捕捉到该异常，并执行相应代码部分。在本例中，输出用户自定义的错误信息“编号错误，没有找到相应雇员!”。如果发生其他类型的错误，将执行OTHERS条件下的代码部分，显示“发生其他错误!”。 
+【训练2】  由程序代码显示系统错误。 
+Sql代码 
+
+    SET SERVEROUTPUT ON  
+    DECLARE  
+    v_temp NUMBER(5):=1;   
+    BEGIN  
+    v_temp:=v_temp/0;   
+    EXCEPTION   
+      WHEN OTHERS THEN  
+    DBMS_OUTPUT.PUT_LINE('发生系统错误！');   
+        DBMS_OUTPUT.PUT_LINE('错误代码：'|| SQLCODE( ));   
+        DBMS_OUTPUT.PUT_LINE('错误信息：' ||SQLERRM( ));   
+            END;  
+
+
+执行结果为： 
+Sql代码 
+
+    发生系统错误！   
+            错误代码：?1476   
+            错误信息：ORA-01476: 除数为 0   
+            PL/SQL 过程已成功完成。  
+
+
+说明：程序运行中发生除零错误，由WHEN OTHERS捕捉到，执行用户自己的输出语句显示错误信息，然后正常结束。在错误处理部分使用了预定义函数SQLCODE( )和SQLERRM( )来进一步获得错误的代码和种类信息。 
+预定义错误 
+Oracle的系统错误很多，但只有一部分常见错误在标准包中予以定义。定义的错误可以在EXCEPTION部分通过标准的错误名来进行判断，并进行异常处理。常见的系统预定义异常如下所示。 
+Sql代码 
+
+    错 误 名 称 错误代码    错 误 含 义   
+    CURSOR_ALREADY_OPEN ORA_06511   试图打开已经打开的游标   
+    INVALID_CURSOR  ORA_01001   试图使用没有打开的游标   
+    DUP_VAL_ON_INDEX    ORA_00001   保存重复值到惟一索引约束的列中   
+    ZERO_DIVIDE ORA_01476   发生除数为零的除法错误   
+    INVALID_NUMBER  ORA_01722   试图对无效字符进行数值转换   
+    ROWTYPE_MISMATCH    ORA_06504   主变量和游标的类型不兼容   
+    VALUE_ERROR ORA_06502   转换、截断或算术运算发生错误   
+    TOO_MANY_ROWS   ORA_01422   SELECT…INTO…语句返回多于一行的数据   
+    NO_DATA_FOUND   ORA_01403   SELECT…INTO…语句没有数据返回   
+    TIMEOUT_ON_RESOURCE ORA_00051   等待资源时发生超时错误   
+    TRANSACTION_BACKED_OUT  ORA_00060   由于死锁，提交失败   
+    STORAGE_ERROR   ORA_06500   发生内存错误   
+    PROGRAM_ERROR   ORA_06501   发生PL/SQL内部错误   
+    NOT_LOGGED_ON   ORA_01012   试图操作未连接的数据库   
+    LOGIN_DENIED    ORA_01017   在连接时提供了无效用户名或口令  
+
+
+比如，如果程序向表的主键列插入重复值，则将发生DUP_VAL_ON_INDEX错误。 
+如果一个系统错误没有在标准包中定义，则需要在说明部分定义，语法如下： 
+错误名 EXCEPTION; 
+定义后使用PRAGMA EXCEPTION_INIT来将一个定义的错误同一个特别的Oracle错误代码相关联，就可以同系统预定义的错误一样使用了。语法如下： 
+PRAGMA EXCEPTION_INIT(错误名，- 错误代码)； 
+【训练1】  定义新的系统错误类型。 
+Sql代码 
+
+    SET SERVEROUTPUT ON  
+            DECLARE  
+            V_ENAME VARCHAR2(10);   
+            NULL_INSERT_ERROR EXCEPTION;   
+            PRAGMA EXCEPTION_INIT(NULL_INSERT_ERROR,-1400);   
+            BEGIN  
+            INSERT INTO EMP(EMPNO) VALUES(NULL);   
+    EXCEPTION   
+    WHEN NULL_INSERT_ERROR THEN  
+        DBMS_OUTPUT.PUT_LINE('无法插入NULL值！');   
+      WHEN OTHERS  THEN  
+        DBMS_OUTPUT.PUT_LINE('发生其他系统错误！');   
+    END;  
+
+
+执行结果为： 
+Sql代码 
+
+    无法插入NULL值！   
+            PL/SQL 过程已成功完成。  
+
+
+  说明：NULL_INSERT_ERROR是自定义异常，同系统错误1400相关联。 
+自定义异常 
+程序设计者可以利用引发异常的机制来进行程序设计，自己定义异常类型。可以在声明部分定义新的异常类型，定义的语法是： 
+错误名 EXCEPTION; 
+用户定义的错误不能由系统来触发，必须由程序显式地触发，触发的语法是： 
+RAISE 错误名； 
+RAISE也可以用来引发模拟系统错误，比如，RAISE ZERO_DIVIDE将引发模拟的除零错误。 
+使用RAISE_APPLICATION_ERROR函数也可以引发异常。该函数要传递两个参数，第一个是用户自定义的错误编号，第二个参数是用户自定义的错误信息。使用该函数引发的异常的编号应该在20 000和20 999之间选择。 
+自定义异常处理错误的方式同前。 
+【训练1】  插入新雇员，限定插入雇员的编号在7000～8000之间。 
+Java代码 
+
+    SET SERVEROUTPUT ON   
+    DECLARE   
+    new_no NUMBER(10);   
+    new_excp1 EXCEPTION;   
+    new_excp2 EXCEPTION;   
+    BEGIN   
+    new_no:=6789;   
+    INSERT INTO emp(empno,ename)   
+      VALUES(new_no, '小郑');   
+      IF new_no<7000 THEN   
+        RAISE new_excp1;   
+      END IF;   
+      IF new_no>8000 THEN   
+        RAISE new_excp2;   
+      END IF;   
+      COMMIT;   
+    EXCEPTION   
+    WHEN new_excp1  THEN   
+        ROLLBACK;   
+        DBMS_OUTPUT.PUT_LINE('雇员编号小于7000的下限！');   
+        WHEN new_excp2  THEN   
+        ROLLBACK;   
+        DBMS_OUTPUT.PUT_LINE('雇员编号超过8000的上限！');   
+        END;  
+
+
+执行结果为： 
+雇员编号小于7000的下限！ 
+PL/SQL 过程已成功完成。 
+说明：在此例中，自定义了两个异常：new_excp1和new_excp2，分别代表编号小于7000和编号大于8000的错误。在程序中通过判断编号大小，产生对应的异常，并在异常处理部分回退插入操作，然后显示相应的错误信息。 
+【训练2】  使用RAISE_APPLICATION_ERROR函数引发系统异常。 
+Sql代码 
+
+    SET SERVEROUTPUT ON  
+    DECLARE  
+    New_no NUMBER(10);   
+    BEGIN  
+      New_no:=6789;   
+     INSERT INTO    emp(empno,ename)   
+      VALUES(new_no, 'JAMES');   
+    IF new_no<7000 THEN  
+        ROLLBACK;   
+        RAISE_APPLICATION_ERROR(-20001, '编号小于7000的下限！');   
+      END IF;   
+      IF new_no>8000 THEN  
+        ROLLBACK;   
+        RAISE_APPLICATION_ERROR (-20002, '编号大于8000的下限！');   
+      END IF;   
+    END;  
+
+
+执行结果为： 
+Sql代码 
+
+    DECLARE  
+            *   
+            ERROR 位于第 1 行:   
+            ORA-20001: 编号小于7000的下限！   
+            ORA-06512: 在line 9  
+
+
+  说明：在本训练中，使用RAISE_APPLICATION_ERROR引发自定义异常，并以系统错误的方式进行显示。错误编号为20001和20002。 
+注意：同上一个训练比较，此种方法不需要事先定义异常，可直接引发。 
+可以参考下面的程序片断将出错信息记录到表中，其中，errors为记录错误信息的表，SQLCODE为发生异常的错误编号，SQLERRM为发生异常的错误信息。 
+DECLARE 
+  v_error_code      NUMBER; 
+  v_error_message   VARCHAR2(255); 
+BEGIN 
+... 
+EXCEPTION 
+... 
+WHEN OTHERS THEN 
+    v_error_code := SQLCODE ; 
+    v_error_message := SQLERRM ; 
+    INSERT INTO errors 
+    VALUES(v_error_code, v_error_message); 
+END; 
+  【练习1】修改雇员的工资，通过引发异常控制修改范围在600～6000之间。 
+阶段训练 
+【训练1】  将雇员从一个表复制到另一个表。 
+步骤1：创建一个结构同EMP表一样的新表EMP1： 
+CREATE TABLE emp1 AS SELECT * FROM SCOTT.EMP WHERE 1=2; 
+步骤2：通过指定雇员编号，将雇员由EMP表移动到EMP1表： 
+Sql代码 
+
+    SET SERVEROUTPUT ON    
+    DECLARE  
+    v_empno NUMBER(5):=7788;   
+    emp_rec emp%ROWTYPE;   
+    BEGIN  
+     SELECT * INTO emp_rec FROM emp WHERE empno=v_empno;   
+     DELETE FROM emp WHERE empno=v_empno;   
+    INSERT INTO emp1 VALUES emp_rec;   
+     IF SQL%FOUND THEN  
+      COMMIT;   
+      DBMS_OUTPUT.PUT_LINE('雇员复制成功！');   
+     ELSE    
+      ROLLBACK;   
+      DBMS_OUTPUT.PUT_LINE('雇员复制失败！');   
+     END IF;   
+    END;  
+
+
+执行结果为： 
+雇员复制成功！ 
+PL/SQL 过程已成功完成。 
+步骤2：显示复制结果： 
+SELECT empno,ename,job FROM emp1; 
+执行结果为： 
+ 
+Sql代码 
+
+    EMPNO ENAME      JOB   
+    ------------- -------------- ----------------   
+        7788  SCOTT      ANALYST  
+
+
+说明：emp_rec变量是根据emp表定义的记录变量，SELECT...INTO...语句将整个记录传给该变量。INSERT语句将整个记录变量插入emp1表，如果插入成功(SQL%FOUND为真)，则提交事务，否则回滚撤销事务。试修改雇员编号为7902，重新执行以上程序。 
+【训练2】  输出雇员工资，雇员工资用不同高度的*表示。 
+输入并执行以下程序： 
+Sql代码 
+
+    SET SERVEROUTPUT ON    
+    BEGIN  
+     FOR re IN (SELECT ename,sal FROM EMP)  LOOP   
+      DBMS_OUTPUT.PUT_LINE(rpad(re.ename,12,' ')||rpad('*',re.sal/100,'*'));   
+     END LOOP;   
+    END;  
+
+
+输出结果为： 
+Sql代码 
+
+    SMITH       ********   
+    ALLEN           ****************   
+    WARD        *************   
+    JONES           ******************************   
+    MARTIN      *************   
+    BLAKE       *****************************   
+    CLARK           *****************************   
+    SCOTT           ******************************   
+    KING            **************************************************   
+    TURNER      ***************   
+    ADAMS       ***********   
+    JAMES           **********   
+    FORD            ******************************   
+    MILLER          *************   
+             执行结果为：   
+            PL/SQL 过程已成功完成。  
+
+
+  说明：第一个rpad函数产生对齐效果，第二个rpad函数根据工资额产生不同数目的*。该程序采用了隐式的简略游标循环形式。 
+【训练3】  编写程序，格式化输出部门信息。 
+输入并执行如下程序： 
+Sql代码 
+
+    SET SERVEROUTPUT ON    
+            DECLARE  
+             v_count number:=0;   
+             CURSOR dept_cursor IS SELECT * FROM dept;   
+            BEGIN  
+              DBMS_OUTPUT.PUT_LINE('部门列表');   
+    DBMS_OUTPUT.PUT_LINE('---------------------------------');   
+             FOR Dept_record IN dept_cursor LOOP      
+             DBMS_OUTPUT.PUT_LINE('部门编号：'|| Dept_record.deptno);   
+             DBMS_OUTPUT.PUT_LINE('部门名称：'|| Dept_record.dname);   
+                DBMS_OUTPUT.PUT_LINE('所在城市：'|| Dept_record.loc);   
+    DBMS_OUTPUT.PUT_LINE('---------------------------------');   
+          v_count:= v_count+1;   
+            END LOOP;   
+             DBMS_OUTPUT.PUT_LINE('共有'||to_char(v_count)||'个部门！');   
+            END;  
+
+
+输出结果为： 
+Sql代码 
+
+    部门列表   
+    ------------------------------------   
+    部门编号：10   
+    部门名称：ACCOUNTING   
+    所在城市：NEW YORK   
+    ------------------------------------   
+    部门编号：20   
+    部门名称：RESEARCH   
+    所在城市：DALLAS   
+    ...   
+    共有4个部门！   
+    PL/SQL 过程已成功完成。  
+
+
+  说明：该程序中将字段内容垂直排列。V_count变量记录循环次数，即部门个数。 
+【训练4】  已知每个部门有一个经理，编写程序，统计输出部门名称、部门总人数、总工资和部门经理。 
+输入并执行如下程序： 
+Sql代码 
+
+    SET SERVEROUTPUT ON    
+    DECLARE  
+     v_deptno number(8);   
+     v_count number(3);   
+     v_sumsal number(6);   
+     v_dname  varchar2(15);   
+    v_manager  varchar2(15);   
+     CURSOR list_cursor IS  
+       SELECT deptno,count(*),sum(sal) FROM emp group by deptno;   
+    BEGIN  
+      OPEN list_cursor;    
+      DBMS_OUTPUT.PUT_LINE('----------- 部 门 统 计 表 -----------');   
+    DBMS_OUTPUT.PUT_LINE('部门名称   总人数  总工资   部门经理');   
+      FETCH list_cursor INTO v_deptno,v_count,v_sumsal;    
+      WHILE list_cursor%found LOOP     
+     SELECT dname INTO v_dname FROM dept   
+        WHERE deptno=v_deptno;   
+        SELECT ename INTO v_manager FROM emp    
+        WHERE deptno=v_deptno and job='MANAGER';   
+    DBMS_OUTPUT.PUT_LINE(rpad(v_dname,13)||rpad(to_char(v_count),8)   
+          ||rpad(to_char(v_sumsal),9)||v_manager);   
+        FETCH list_cursor INTO v_deptno,v_count,v_sumsal;    
+        END LOOP;   
+            DBMS_OUTPUT.PUT_LINE('--------------------------------------');   
+            CLOSE list_cursor;   
+            END;  
+
+
+输出结果为： 
+Sql代码 
+
+    -------------------- 部 门 统 计 表 -----------------   
+            部门名称     总人数  总工资     部门经理   
+            ACCOUNTING    3      8750       CLARK   
+            RESEARCH      5     10875       JONES   
+            SALES             6      9400       BLAKE   
+            -------------------------------------------------------------   
+            PL/SQL 过程已成功完成。   
+
+
+说明：游标中使用到了起分组功能的SELECT语句，统计出各部门的总人数和总工资。再根据部门编号和职务找到部门的经理。该程序假定每个部门有一个经理。 
+【训练5】  为雇员增加工资，从工资低的雇员开始，为每个人增加原工资的10%，限定所增加的工资总额为800元，显示增加工资的人数和余额。 
+输入并调试以下程序： 
+Sql代码 
+
+    SET SERVEROUTPUT ON    
+    DECLARE    
+      V_NAME CHAR(10);   
+      V_EMPNO NUMBER(5);   
+      V_SAL NUMBER(8);   
+      V_SAL1 NUMBER(8);   
+      V_TOTAL NUMBER(8) := 800;     --增加工资的总额   
+    V_NUM NUMBER(5):=0;     --增加工资的人数   
+             CURSOR emp_cursor IS    
+              SELECT EMPNO,ENAME,SAL FROM EMP ORDER BY SAL ASC;   
+            BEGIN  
+             OPEN emp_cursor;   
+            DBMS_OUTPUT.PUT_LINE('姓名      原工资  新工资');    
+            DBMS_OUTPUT.PUT_LINE('---------------------------');    
+             LOOP   
+                FETCH emp_cursor INTO V_EMPNO,V_NAME,V_SAL;   
+    EXIT WHEN emp_cursor%NOTFOUND;   
+             V_SAL1:= V_SAL*0.1;   
+                IF V_TOTAL>V_SAL1 THEN  
+                V_TOTAL := V_TOTAL - V_SAL1;   
+                V_NUM:=V_NUM+1;   
+        DBMS_OUTPUT.PUT_LINE(V_NAME||TO_CHAR(V_SAL,'99999')||   
+            TO_CHAR(V_SAL+V_SAL1,'99999'));   
+                 UPDATE EMP SET SAL=SAL+V_SAL1   
+                 WHERE EMPNO=V_EMPNO;   
+             ELSE  
+    DBMS_OUTPUT.PUT_LINE(V_NAME||TO_CHAR(V_SAL,'99999')||TO_CHAR(V_SAL,'99999'));   
+             END IF;   
+            END LOOP;   
+            DBMS_OUTPUT.PUT_LINE('---------------------------');   
+            DBMS_OUTPUT.PUT_LINE('增加工资人数:'||V_NUM||' 剩余工资：'||V_TOTAL);     
+             CLOSE emp_cursor;    
+             COMMIT;   
+             END;  
+
+
+输出结果为： 
+Sql代码 
+
+    姓名        原工资  新工资   
+            ---------------------------------------------   
+    SMITH       1289   1418   
+    JAMES       1531   1684   
+    MARTIN      1664   1830   
+    MILLER          1730   1903   
+    ALLEN           1760   1936   
+    ADAMS       1771   1771   
+    TURNER      1815   1815   
+    WARD        1830   1830   
+    BLAKE       2850   2850   
+    CLARK       2850   2850   
+    JONES           2975   2975   
+    FORD            3000   3000   
+    KING            5000   5000   
+    -----------------------------------------------   
+    增加工资人数：5 剩余工资：3   
+    PL/SQL 过程已成功完成。  
+
+
+【练习1】按部门编号从小到大的顺序输出雇员名字、工资以及工资与平均工资的差。 
+【练习2】为所有雇员增加工资，工资在1000以内的增加30%，工资在1000～2000之间的增加20%，2000以上的增加10%。
+分类: ORACLE
+好文要顶 关注我 收藏该文
+君子笑而不语
+关注 - 7
+粉丝 - 32
++加关注
+5
+0
+« 上一篇：oracle中计算某月的天数
+» 下一篇：ORACLE 计算时间相减间隔
+posted @ 2017-09-08 17:49 君子笑而不语 阅读(69022) 评论(1) 编辑 收藏
+
+评论列表
+  
+#1楼 2018-09-23 19:48 groovydiscovery  
+学习了，赞。
+支持(0)反对(0)
+刷新评论刷新页面返回顶部
+注册用户登录后才能发表评论，请 登录 或 注册，访问网站首页。
+【推荐】超50万C++/C#源码: 大型实时仿真组态图形源码
+【活动】看雪2019安全开发者峰会，共话安全领域焦点
+【培训】Java程序员年薪40W，他1年走了别人5年的路
+相关博文：
+· oracle中游标详细用法
+· oracle中游标详细用法
+· (Oracle)游标的相关知识和实例
+· (Oracle)游标的相关知识和实例
+· 全面解析数据库中游标的使用方法
+最新新闻：
+· 挑战奈飞 迪士尼获得Hulu完全运营控制权
+· 亚马逊销毁大量滞销产品：崭新商品直接送到垃圾场
+· 英特尔再曝重大安全漏洞 黑客可窃取PC中机密数据
+· 对营收过于乐观误导投资者 苹果高管遭集体诉讼
+· 耗资4.6亿，美宇航局2021年测试改变小行星轨道技术
+» 更多新闻...
+公告
+昵称：君子笑而不语
+园龄：6年11个月
+粉丝：32
+关注：7
++加关注
+<	2019年5月	>
+日	一	二	三	四	五	六
+28	29	30	1	2	3	4
+5	6	7	8	9	10	11
+12	13	14	15	16	17	18
+19	20	21	22	23	24	25
+26	27	28	29	30	31	1
+2	3	4	5	6	7	8
+搜索
+ 
+ 
+随笔分类
+
+    Android(17)
+    Extjs(4)
+    Hadoop(16)
+    Hadoop_Azkaban(3)
+    Hadoop_Hive(6)
+    Hadoop_Sqoop(4)
+    Html、Javascript(80)
+    http(4)
+    IDEA(5)
+    JAVA(41)
+    JavaEE(19)
+    JVM(8)
+    LINUX(14)
+    Mybatis(5)
+    MYSQL(17)
+    Nodejs(4)
+    ORACLE(15)
+    postgreSQL(3)
+    spring-boot(6)
+    SpringCloud(9)
+    SQL(9)
+    WEB安全(5)
+    其他(20)
+    数据库(21)
+
+Copyright ©2019 君子笑而不语
