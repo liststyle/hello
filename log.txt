@@ -1,0 +1,85 @@
+%d – 具体的时间. %d{yyyy MMM dd HH:mm:ss,SSS}
+        输出类似：输出类似：2016年8月21日 00:00:00,921
+%p – 输出优先级，即DEBUG，INFO，WARN，ERROR，FATAL 
+%c – 输出所属的类目，通常就是所在类的全名 -Logger.getLogger(name) 其实就是输出这个name，所以，我们这里一般用当前类的class。
+%L(这是大写的L) — 只输出行号
+%l - 输出日志事件的发生位置，包括类目名、发生的线程，以及在代码中的行数。举例：(Log4jDemo.java:13)
+%m – 输出代码中指定的消息-我们指定的
+%n —换行符-Windows平台为“\r\n”，Unix平台为“\n” 
+%r   输出自应用启动到输出该log信息耗费的毫秒数 
+%t   输出产生该日志事件的线程名
+
+配置文件的一个模板:
+
+在src/bin目录下（即WEB-INF/classes）建立一个log4j.properties文件.
+
+在WEB-INF/classes目录下，为log4j的默认目录。Log4j.properties也是log4j的默认文件名。
+
+#####配置根元素
+log4j.rootLogger=INFO,console,file
+#存储INFO以及以上级别的记录
+#file的输入地址为文件
+#console表示输出到控制台
+log4j.appender.file=org.apache.log4j.RollingFileAppender
+#以下是具体的目录
+log4j.appender.file.File=d:/a/test.log
+#每个文件的最大大小
+log4j.appender.file.MaxFileSize=20KB
+#最多可以是多少个文件
+log4j.appender.file.MaxBackupIndex=3
+#信息的布局格式-按指定的格式打出
+log4j.appender.file.layout=org.apache.log4j.PatternLayout
+#具体的布局格式 - %d为时间
+#log4j.appender.file.layout.ConversionPattern=%d %p [%c] %m %l %n
+log4j.appender.file.layout.ConversionPattern=%d %p [%l]\:%m -%t%n 
+
+#以下配置输出到控制台的配置
+log4j.appender.console=org.apache.log4j.ConsoleAppender
+log4j.appender.console.layout=org.apache.log4j.PatternLayout
+#log4j.appender.console.layout.ConversionPattern=%d %p [%c] %m%n
+log4j.appender.console.layout.ConversionPattern=%d %p [%l]\:%m -%t%n 
+
+
+一个模板:
+
+#####配置根元素
+#调试模式，写成DEBUG  ---设置日志级别-存储DEBUG以及以上级别的记录
+log4j.rootLogger=DEBUG,console,file,error
+#生产级项目,写成INFO就可以了
+#INFO级别比DEBUG级别高 ---console,file,error都是自己写的-名称自己定
+
+
+####以下配置输出到控制台的配置####
+log4j.appender.console=org.apache.log4j.ConsoleAppender
+log4j.appender.console.layout=org.apache.log4j.PatternLayout
+log4j.appender.console.Target=System.out
+#log4j.appender.console.layout.ConversionPattern=%d %p [%c] %m%n
+log4j.appender.console.layout.ConversionPattern=%d %p [%l]\:%m -%t%n
+
+
+
+### 输出到日志文件 ###
+log4j.appender.file=org.apache.log4j.RollingFileAppender
+#以下是具体的目录
+log4j.appender.file.File=info.log
+#每个文件的最大大小
+log4j.appender.file.MaxFileSize=20MB
+#最多可以是多少个文件
+log4j.appender.file.MaxBackupIndex=3
+## 输出INFO级别以上的日志 --Threshold是个全局的过滤器，它将把低于所设置的INFO的信息过滤不显示出来。
+log4j.appender.file.Threshold=INFO
+#信息的布局格式-按指定的格式打出
+log4j.appender.file.layout=org.apache.log4j.PatternLayout
+#具体的布局格式 - %d为时间
+#log4j.appender.file.layout.ConversionPattern=%d %p [%c] %m %l %n
+log4j.appender.file.layout.ConversionPattern=%d %p [%l]\:%m -%t%n
+
+### 保存异常信息到单独文件 ###
+log4j.appender.error = org.apache.log4j.DailyRollingFileAppender
+## 异常日志文件名
+log4j.appender.error.File = error.log
+log4j.appender.error.Append = true
+## 只输出ERROR级别以上的日志!!!
+log4j.appender.error.Threshold = ERROR
+log4j.appender.error.layout = org.apache.log4j.PatternLayout
+log4j.appender.error.layout.ConversionPattern = %d %p [%l]\:%m -%t%n
