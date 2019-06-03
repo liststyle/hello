@@ -1,0 +1,72 @@
+1.	var  userAgent  =  navigator .userAgent,     
+2.	rMsie  = /(msie\s|trident.*rv:)([\w.]+)/,     
+3.	rFirefox  = /(firefox)\/([\w.]+)/,     
+4.	rOpera  = /(opera).+version\/([\w.]+)/,     
+5.	rChrome  = /(chrome)\/([\w.]+)/,     
+6.	rSafari  = /version\/([\w.]+).*(safari)/;    
+7.	var browser;    
+8.	var version;    
+9.	var  ua  =  userAgent .toLowerCase();    
+10.	function uaMatch(ua){    
+11.	  var  match  =  rMsie .exec(ua);    
+12.	  if(match != null){    
+13.	    return { browser : "IE", version : match[2] || "0" };    
+14.	  }    
+15.	  var  match  =  rFirefox .exec(ua);    
+16.	  if (match != null) {    
+17.	    return { browser : match[1] || "", version : match[2] || "0" };    
+18.	  }    
+19.	  var  match  =  rOpera .exec(ua);    
+20.	  if (match != null) {    
+21.	    return { browser : match[1] || "", version : match[2] || "0" };    
+22.	  }    
+23.	  var  match  =  rChrome .exec(ua);    
+24.	  if (match != null) {    
+25.	    return { browser : match[1] || "", version : match[2] || "0" };    
+26.	  }    
+27.	  var  match  =  rSafari .exec(ua);    
+28.	  if (match != null) {    
+29.	    return { browser : match[2] || "", version : match[1] || "0" };    
+30.	  }    
+31.	  if (match != null) {    
+32.	    return { browser : "", version : "0" };    
+33.	  }    
+34.	}    
+35.	var  browserMatch  =  uaMatch (userAgent.toLowerCase());    
+36.	if (browserMatch.browser){    
+37.	  browser  =  browserMatch .browser;    
+38.	  version  =  browserMatch .version;    
+39.	}    
+40.	document.write(browser+version);            
+
+
+
+function getBrowserInfo() {
+				　　var Sys = {};
+				　　var ua = navigator.userAgent.toLowerCase();
+				　　var s; (s = ua.match(/msie ([\d.]+)/)) ? Sys.ie = s[1] :
+				　　(s = ua.match(/firefox\/([\d.]+)/)) ? Sys.firefox = s[1] :
+				　　(s = ua.match(/chrome\/([\d.]+)/)) ? Sys.chrome = s[1] :
+				　　(s = ua.match(/opera.([\d.]+)/)) ? Sys.opera = s[1] :
+				　　(s = ua.match(/version\/([\d.]+).*safari/)) ? Sys.safari = s[1] : 0;
+				 
+				　　if(Sys.ie) {
+				　　　　return 'IE: ' + Sys.ie;
+				　　}
+				　　if(Sys.firefox) {
+				　　　　return 'Firefox: ' + Sys.firefox;
+				　　}
+				　　if(Sys.chrome) {
+				　　　　return 'Chrome: ' + Sys.chrome;
+				　　}
+				　　if(Sys.opera) {
+				　　　　return 'Opera: ' + Sys.opera;
+				　　}
+				　　if(Sys.safari) {
+				　　　　return 'Safari: ' + Sys.safari;
+				　　}
+				} 
+				var browser = getBrowserInfo() ;
+				var verinfo = (browser+"").replace(/[^0-9.]/ig, "");   // 版本号
+				alert(browser);
+				alert(verinfo);
