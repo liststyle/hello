@@ -1,0 +1,171 @@
+public class SendEmail {
+ private Log log  = LogFactory.getLog(getClass());
+ private String[] to = {};//接收人
+    private String[] cc ={};//抄收人
+ private String from = "";//发送人
+    private String host = "";//host
+    private String subject = "";//主题
+    private String username = "";//用户名
+    private String password = "";//密码
+    private String content = "";//内容
+    private String auth = "false";//auth验证
+    //实例当前类时，加载相关参数
+ public SendEmail(String[] to, String[] cc, String from, String subject,String content) {
+        PropertiesConfig propertiesConfig = null;
+        try {
+            propertiesConfig = PropertiesConfig.getInstance();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        this.setHost(propertiesConfig.getValue("smtpHost"));
+        this.setUsername(propertiesConfig.getValue("emailUserName"));
+        this.setPassword(propertiesConfig.getValue("emailPWD"));
+        this.setAuth(propertiesConfig.getValue("auth"));
+        this.setTo(to);
+        this.setFrom(from);
+        this.setCc(cc);
+        this.setSubject(subject);
+        this.setContent(content);
+    }
+ public boolean startSend() {
+        Properties props = System.getProperties();
+        props.put("mail.smtp.host", this.getHost());
+        props.put("mail.smtp.username", this.getUsername());
+        props.put("mail.smtp.password", this.getPassword());
+        props.put("mail.smtp.auth", this.getAuth());
+
+        Session session = Session.getInstance(props);
+        try {
+         MimeMessage msg = new MimeMessage(session);
+            msg.setFrom(new InternetAddress(this.getFrom()));
+            
+            InternetAddress[] address = new InternetAddress[getTo().length];
+            for (int i = 0; i < getTo().length; i++) {
+                address[i] = new InternetAddress(getTo()[i]);
+            }
+            msg.setRecipients(Message.RecipientType.TO, address);
+            if (null != cc && cc.length > 0) {
+                InternetAddress[] addressCC = new InternetAddress[getCc().length];
+                for (int i = 0; i < getCc().length; i++) {
+                    addressCC[i] = new InternetAddress(getCc()[i]);
+                }
+                msg.setRecipients(Message.RecipientType.CC, addressCC);
+            }
+            if (null!=cc&&cc.length>0) {
+             msg.setHeader("Disposition-Notification-To", cc[0]);
+   }//设置回执，其中cc[0]可以指向你回执的邮箱
+            msg.setHeader("Sensitivity", "Company-Confidential");//设置机密邮件
+            msg.setHeader ( "X-Priority", "1" ) ; //设置优先级
+            msg.setSubject(this.getSubject());//设置主题
+            Multipart mp = new MimeMultipart();
+            Enumeration efile = file.elements();
+            while (efile.hasMoreElements()) {//循环加载所有附件
+                MimeBodyPart mbp = new MimeBodyPart();
+                filename = efile.nextElement().toString();
+                FileDataSource fds = new FileDataSource(filename);
+                mbp.setDataHandler(new DataHandler(fds));
+                mbp.setFileName(fds.getName());
+                mp.addBodyPart(mbp);
+            }
+            file.removeAllElements();
+            msg.setSentDate(new Date());
+            MimeBodyPart mbpt = new MimeBodyPart();
+            mbpt.setContent(this.getContent(), "text/html;charset=UTF-8");
+            mp.addBodyPart(mbpt);
+            msg.setContent(mp);
+            msg.saveChanges();
+            Transport transport = session.getTransport("smtp");
+            if ("false".equals(this.getAuth())) {
+                transport.connect();
+            } else {
+                transport.connect(getHost(), getUsername(), getPassword());
+            }
+            transport.sendMessage(msg, msg.getAllRecipients());
+            transport.close();
+            log.info("send mail success;eMailAddress:"+to);
+        } catch (MessagingException mex) {
+            log.error("send mail exception, cause: " + mex);
+            Exception ex = null;
+            if ((ex = mex.getNextException()) != null) {
+                log.error("send mail exception, cause: " + ex);
+            }
+            return false;
+        }
+        return true;
+    }
+public String[] getTo() {
+        return to;
+    }
+    public void setTo(String[] to) {
+        this.to = to;
+    }
+
+    public String getFrom() {
+        return from;
+    }
+    public String[] getCc() {
+  return cc;
+ }
+ public void setCc(String[] cc) {
+  this.cc = cc;
+ }
+    public void setFrom(String from) {
+        this.from = from;
+    }
+    public String getHost() {
+        return host;
+    }
+    public void setHost(String host) {
+        this.host = host;
+    }
+    public String getSubject() {
+        return subject;
+    }
+    public void setSubject(String subject) {
+        this.subject = subject;
+    }
+    public String getUsername() {
+        return username;
+    }
+    public void setUsername(String username) {
+        this.username = username;
+    }
+    public String getPassword() {
+        return password;
+    }
+    public void setPassword(String password) {
+        this.password = password;
+    }
+    public String getContent() {
+        return content;
+    }
+    public void setContent(String content) {
+        this.content = content;
+    }
+    public String getAuth() {
+        return auth;
+    }
+    public void setAuth(String auth) {
+        this.auth = auth;
+    }
+    private String filename = "";
+    Vector file = new Vector();
+    //多附件的操作
+    public boolean attachfile(String fname) {
+        File dataFile = new File(fname);
+        if (dataFile.exists()) {
+            file.addElement(fname);
+            return true;
+        }else{
+         return false;
+        }
+    }
+
+}
+
+
+
+			
