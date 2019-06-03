@@ -1,0 +1,230 @@
+<%@page language="java" import="java.io.*,java.sql.*,java.util.*" pageEncoding="utf-8" %>
+
+<%
+String dept = request.getParameter("dept");
+String cat = request.getParameter("cat");
+
+		/*
+		获取文件种类
+        */
+		Connection conn = null;
+		
+		List<Map<String, String>> docList = null;
+		Map<String, List<Map<String, String>>> grpDocMap = null;
+		Map<String,Map<String,List<Map<String, String>>>> catGrpDocMap = new HashMap<String,Map<String,List<Map<String, String>>>>();
+		List<Map<String, String>> deptList = null;
+		ResultSet rs = null;
+		PreparedStatement ps = null;
+		try{
+			Class.forName("oracle.jdbc.driver.OracleDriver");
+    		String url = "";
+    		String username = "";
+    		String password = "";
+    		conn = DriverManager.getConnection(url,username,password);
+			String sql = "select d.doc_grp,d.doc_cate,d.doc_name,d.doc_url,c.code_desc as cat from iids_code c left join iids_doc d on d.doc_cate=c.code_value";
+			if ( null != dept && !"".equals(dept)) {
+			  sql += " and d.doc_dept='" + dept + "'";
+			}
+			sql += " where c.code_type='DOC_CATE' order by doc_cate";
+
+			ps = conn.prepareStatement(sql);
+
+			if ( null != dept && !"".equals(dept)) {
+//			  ps.setString(1, dept);
+			}
+
+			rs = ps.executeQuery(sql);
+//out.println(sql);
+			Map<String, String> doc = null;
+			String grp = "";
+			String categories = "";
+
+			while(rs.next()) {
+
+			  doc = new HashMap<String, String>();
+			  if ( null==rs.getString("doc_name") || "".equals(rs.getString("doc_name")) ) {
+			    catGrpDocMap.put(rs.getString("cat"), null);
+				continue;
+			  }
+			  doc.put("name", rs.getString("doc_name"));
+			  doc.put("url", rs.getString("doc_url"));
+			  if (!categories.equals(rs.getString("doc_cate"))) {
+
+                categories = rs.getString("doc_cate");
+				grp = rs.getString("doc_grp");
+				docList = new ArrayList<Map<String, String>>();
+			    grpDocMap = new HashMap<String, List<Map<String, String>>>();
+				catGrpDocMap.put(rs.getString("cat"), grpDocMap);
+				grpDocMap.put(grp, docList);
+                docList.add(doc);
+
+			  } else if (!grp.equals(rs.getString("doc_grp"))) {
+
+                grp = rs.getString("doc_grp");
+				docList = new ArrayList<Map<String, String>>();
+				grpDocMap = new HashMap<String, List<Map<String, String>>>();
+				grpDocMap.put(grp, docList);
+
+			  } else {
+
+			    docList.add(doc);
+			  }
+
+			  System.out.println("种类："+categories);
+			}
+
+			// get department list
+			sql = "select code_value,code_desc from iids_code where code_type='HGC_DEPT'";
+
+			ps = conn.prepareStatement(sql);
+
+			rs = ps.executeQuery(sql);
+//out.println(sql);
+
+			deptList = new ArrayList<Map<String, String>>();
+
+			while(rs.next()) {
+
+              Map deptMap = new HashMap<String, String>();
+			  deptMap.put("code", rs.getString("code_value"));
+			  deptMap.put("name", rs.getString("code_desc"));
+			  deptList.add(deptMap);
+			}
+
+		}catch(Exception e){
+			System.out.println("数据库异常");
+			out.println(e.getMessage());
+			e.printStackTrace();
+		} finally {
+		  try {
+		    if ( rs !=null ) {
+		      rs.close();
+		    }
+		    if ( ps !=null ) {
+              ps.close();
+		    }
+		    if ( conn !=null ) {
+		      conn.close();
+		    }
+		  } catch(Exception e) {
+		    e.printStackTrace();
+		  }
+		}
+%>
+<!doctype html>
+<html>
+	<head>
+		<title>文件下载</title>
+		<style>
+			#grpFiles{
+				width:600px;
+				height:800px;
+				margin-right:100px;
+				border:1px solid red;
+				float:right;
+			}
+			#deptList{
+				width:200px;
+				height:800px;
+				margin-left:100px;
+				border:1px solid red;
+				float:left;
+			}
+			#grpFiles table{
+				border:1px solid #ccc;
+				text-align:center;
+			}
+			#grpFiles table tr td{
+				width:80px;
+				border:1px solid #333;
+			}
+		</style>
+	</head>
+	<body>
+		<%
+
+			Set<Map.Entry<String, Map<String,List<Map<String, String>>>>> catGrpDocMapEntrySet = catGrpDocMap.entrySet();
+//out.println("file div");
+	    	%>
+	    	<div id="grpFiles">
+	    		<table>
+	    			<tr>
+					<%
+					String display = "block";
+					for (Map.Entry<String, Map<String,List<Map<String, String>>>> catGrpDocMapEntry: catGrpDocMapEntrySet) {
+					  out.println("<td><a href='javascript:onCatChange(\"" + catGrpDocMapEntry.getKey().replace(" ","_") + "\")'>" + catGrpDocMapEntry.getKey()  + "</a></td>");
+					}
+
+//out.println("cat table");
+
+					%>
+
+					</tr>
+				</table>
+	    	<%
+			if ( null==dept || "".equals(dept) ) {
+			  out.println("<div>Please select a department.</div>");
+			} else
+				for (Map.Entry<String, Map<String,List<Map<String, String>>>> catGrpDocMapEntry: catGrpDocMapEntrySet) {
+
+//out.println("catGrpDocMapEntry.getKey(): "+catGrpDocMapEntry.getKey());
+
+				  grpDocMap = catGrpDocMapEntry.getValue();
+				  if ( null == grpDocMap) {
+				    out.println("<div id='divCat" + catGrpDocMapEntry.getKey().replace(" ","_") +"' name='divCat' style='display:" + display +"'>No " + catGrpDocMapEntry.getKey() + " file.</div>");
+					display = "none";
+				    continue;
+				  }
+
+//out.println("grpDocMap.size: " + grpDocMap.size());
+
+				  for (Map.Entry<String,List<Map<String, String>>> grpDocMapEntry: grpDocMap.entrySet()) {
+
+//out.println("grpDocMapEntry.getKey(): "+grpDocMapEntry.getKey());
+				  out.println("<div id='divCat" + catGrpDocMapEntry.getKey().replace(" ","_") +"' name='divCat' style='display:" + display +"'>");
+				  display = "none";
+				  out.println(grpDocMapEntry.getKey() + " <br>");
+
+					for (Map<String, String> docMap: grpDocMapEntry.getValue()) {
+//out.println("grpDocMapEntry.getKey(): "+grpDocMapEntry.getKey());
+					  out.println("<a href="+"file:///"+docMap.get("url")+"\\"+docMap.get("name")+" download="+docMap.get("name")+">" + docMap.get("name") + "</a><br>");
+					
+					}
+					%>
+
+				</div>
+	    	<%
+			      }
+			}
+//out.println("file list end");
+	    	%>
+	    	</div>
+		<div id="deptList">
+			<p>Dipartment List</p>
+			<%
+//out.println("deptList.size: " + deptList.size());
+			if (null!=deptList)
+			for ( Map<String, String> deptMap: deptList ) {
+			  out.println("<a href=downloadBody.jsp?dept="+ deptMap.get("code") +">" + deptMap.get("name") + "</a><br>");
+			}
+			%>
+		</div>
+
+<script type="text/javascript">
+function onCatChange(cat) {
+
+  var divCats = document.getElementsByName("divCat");
+  var divcat;
+  for (var i=0; i<divCats.length; i++) {
+    divcat = divCats[i];
+    if (divcat.id == ("divCat" + cat)) {
+	  divcat.style.display = "block";
+	} else {
+      divcat.style.display = "none";
+	}
+  }
+}
+</script>
+	</body>
+</html>
+
