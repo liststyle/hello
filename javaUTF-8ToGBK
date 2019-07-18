@@ -1,0 +1,12 @@
+public static void main(String[] args) {
+		String str="字符串编码转换";
+        try {
+        	byte[] temp=str.getBytes("utf-8");//这里写原编码方式
+	        byte[] newtemp=new String(temp,"utf-8").getBytes("gbk");//这里写转换后的编码方式
+	        String newStr=new String(newtemp,"gbk");//这里写转换后的编码方式
+	        System.out.println(newStr);
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        
+	}
