@@ -1,6 +1,3 @@
-# 知识点汇总
-	- feature-A
-	- fix-B
-	- faeture-C
-	- feature-C
+## 知识点汇总
+###总结项目中碰到的问题和解决方法
 
