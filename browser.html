@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>浏览器检测</title>
+</head>
+<body>
+	<script type="text/javascript">
+		var userAgent = navigator.userAgent;
+		console.log(userAgent);
+		function BrowserType(){
+			var userAgent = navigator.userAgent;
+			var isOpera = userAgent.indexOf("Opera") > -1;
+			//判断是否是IE浏览器
+			
+
+			var isIE = userAgent.indexOf("compatible") > -1 && userAgent.indexOf("MSIE") > -1 && 
+				!isOpera;
+			//判断是否是Edge浏览器
+			var isEdge = userAgent.indexOf("Edge") > -1;
+			
+			var isFirefox = userAgent.indexOf("Firefox") > -1;
+			var isSafari = userAgent.indexOf("Safari") > -1 && userAgent.indexOf("Chrome") == -1 
+				;
+			var isChrome = userAgent.indexOf("Chrome") > -1 && userAgent.indexOf("Safari") > -1 
+				&& !isEdge;
+			var iE11Info = userAgent.toLowerCase();
+			var isIE11 = false;
+			if(isIE){
+				var reIE = new RegExp("MSIE (\\d+\\.\\d+);");
+				reIE.test(userAgent);
+				var fIEVersion = parseFloat(RegExp["$1"]);
+				
+				if(fIEVersion == 7){
+					return "IE7";
+				}else if(fIEVersion == 8){
+					return "IE8";
+				}else if(fIEVersion == 9){
+					return "IE9";
+				}else if(fIEVersion == 10){
+					return "IE10";
+				}else{
+					return "0";
+				}
+			}else{
+				// var reIE11 = /rv:([\d.]+)/;
+				var reIE11 = /rv:11.0/;
+				isIE11 = reIE11.test(iE11Info);
+				
+			}
+			if(isIE11){
+				return "IE11";
+			}
+			if(isFirefox){
+				return "Firefox";
+			}
+			if(isOpera){
+				return "Opera";
+			}
+			if(isSafari){
+				return "Safari";
+			}
+			if(isChrome){
+				return "Chrome";
+			}
+			if(isEdge){
+				return "Edge";
+			}
+		}
+		function isIE(){
+			var userAgent = navigator.userAgent;
+			var isIE = userAgent.indexOf("compatible") > -1 && userAgent.indexOf("MSIE") > -1 &&
+				!isOpera;
+			if(isIE){
+				return "1";
+			}else{
+				return "-1";
+			}
+		}
+		function IEVersion(){
+			var userAgent = navigator.userAgent;
+			var isIE = userAgent.indexOf("compatible") > -1 && userAgent.indexOf("MSIE") > -1 &&
+				!isOpera;
+			var isEdge = userAgent.indexOf("Windows NT 6.1; Trident/7.0") > -1 && !isIE;
+			if(isIE){
+				var reIE = new RegExp("MSIE (\\d+\\.\\d+);");
+				reIE.test(userAgent);
+				var fIEVersion = parseFloat(RegExp["$1"]);
+				if(fIEVersion == 7){
+					return "IE7";
+				}else if(fIEVersion == 8){
+					return "IE8";
+				}else if(fIEVersion == 9){
+					return "IE9";
+				}else if(fIEVersion == 10){
+					return "IE10";
+				}else if(fIEVersion == 11){
+					return "IE11";
+				}else{
+					return "0";
+				}
+			}else if(isEdge){
+				return "Edge";
+			}else{
+				return "-1";
+			}
+		}
+		console.log(BrowserType());
+	</script>
+</body>
+</html>
