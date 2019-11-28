@@ -1,0 +1,85 @@
+package com.ryan.controller;
+
+import java.io.IOException;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.alibaba.fastjson.JSONObject;
+import com.ryan.entity.DwqForm;
+
+@Controller
+@RequestMapping("/test")
+public class TestController {
+//	@RequestMapping("/test1")
+//	@ResponseBody
+//	public void test(@RequestParam MusicInfo musicInfo) {
+//		System.out.println("������"+musicInfo.getMusicName());
+//	}
+	@RequestMapping(value="/getSom",method=RequestMethod.POST,produces="application/json;charset=UTF-8")
+	@ResponseBody
+	public String getSomething(DwqForm form,HttpServletRequest request,
+			HttpServletResponse response) {
+		try {
+			JSONObject json = getRequestJsonObject(request);
+			
+			System.out.println(new String(json.getString("msg").getBytes("GBK"),"UTF-8"));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println(request.getParameterNames());
+		System.out.println(request.getParameterMap());
+		System.out.println(request.getParameterValues("msg"));
+		System.out.println(form.getMsg());
+		return "调用成功";
+	}
+	public static byte[] getRequestPostBytes(HttpServletRequest request)
+            throws IOException {
+        int contentLength = request.getContentLength();
+        if(contentLength<0){
+            return null;
+        }
+        byte buffer[] = new byte[contentLength];
+        for (int i = 0; i < contentLength;) {
+ 
+            int readlen = request.getInputStream().read(buffer, i,
+                    contentLength - i);
+            if (readlen == -1) {
+                break;
+            }
+            i += readlen;
+        }
+        return buffer;
+    }
+	public static String getRequestPostStr(HttpServletRequest request)
+            throws IOException {
+        byte buffer[] = getRequestPostBytes(request);
+        String charEncoding = request.getCharacterEncoding();
+        if (charEncoding == null) {
+            charEncoding = "UTF-8";
+        }
+        return new String(buffer, charEncoding);
+    }
+	public static JSONObject getRequestJsonObject(HttpServletRequest request) throws IOException {
+        String json = getRequestJsonString(request);
+        return JSONObject.parseObject(json);
+    }
+	public static String getRequestJsonString(HttpServletRequest request)
+            throws IOException {
+        String submitMehtod = request.getMethod();
+        // GET
+        if (submitMehtod.equals("GET")) {
+            return new String(request.getQueryString().getBytes("iso-8859-1"),"utf-8").replaceAll("%22", "\"");
+            // POST
+        } else {
+            return getRequestPostStr(request);
+        }
+    }
+
+}
