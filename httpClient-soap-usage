@@ -1,0 +1,142 @@
+通过httpClient调用webservice的步骤
+1.先下载破解版的soapui
+2.打开soapui，新建工程File->NEW SOAP PROJECT
+3.输入工程名和已知的wsdl链接,点击完成
+4.在生成的方法名下双击request1，就可以进行测试了。
+5.main方法中的soapXml可以用request1左侧的替换，并添加参数。
+
+java代码如下
+package com.sbfc.http;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.Charset;
+import java.util.logging.Logger;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
+
+public class WebServiceUtil {
+	static int socketTimeout = 30000;// 请求超时时间
+	static int connectTimeout = 30000;// 传输超时时间
+	static Logger logger = Logger.getLogger("");
+
+	/**
+	* 使用SOAP发送消息（HttpClient方式）
+	*
+	* @param postUrl
+	* @param soapXml
+	* @param soapAction
+	* @return
+	*/
+	public static String doPostSoap(String postUrl, String soapXml,
+			String soapAction) {
+		String retStr = "";
+		// 创建HttpClientBuilder
+		HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+		// HttpClient
+		CloseableHttpClient closeableHttpClient = httpClientBuilder.build();
+		HttpPost httpPost = new HttpPost(postUrl);
+		// 设置请求和传输超时时间
+		RequestConfig requestConfig = RequestConfig.custom()
+		.setSocketTimeout(socketTimeout)
+		.setConnectTimeout(connectTimeout).build();
+		httpPost.setConfig(requestConfig);
+		try {
+			httpPost.setHeader("Content-Type", "text/xml;charset=UTF-8");
+			httpPost.setHeader("SOAPAction", soapAction);
+			StringEntity data = new StringEntity(soapXml,
+			Charset.forName("UTF-8"));
+			httpPost.setEntity(data);
+			CloseableHttpResponse response = closeableHttpClient
+			.execute(httpPost);
+			HttpEntity httpEntity = response.getEntity();
+			if (httpEntity != null) {
+				// 打印响应内容
+				retStr = EntityUtils.toString(httpEntity, "UTF-8");
+				logger.info("response:" + retStr);
+			}
+			// 释放资源
+			closeableHttpClient.close();
+		} catch (Exception e) {
+			System.err.println("请求出错！" +  e);
+		}
+		return retStr;
+	}
+
+	/**
+	* 使用HttpURLConnection方式连接
+	* @param soapurl
+	* @param soapXML
+	* @return
+	* @throws IOException
+	*/
+	public static String urlConnectionUtil(String soapurl,String soapXML) throws IOException {
+		//第一步：创建服务地址
+		//http://172.25.37.31:8080/PeopleSoftService/getPerson.wsdl
+		URL url = new URL(soapurl);
+		//第二步：打开一个通向服务地址的连接
+		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+		//第三步：设置参数
+		//3.1发送方式设置：POST必须大写
+		connection.setRequestMethod("POST");
+		//3.2设置数据格式：content-type
+		connection.setRequestProperty("content-type", "text/xml;charset=utf-8");
+		//3.3设置输入输出，因为默认新创建的connection没有读写权限，
+		connection.setDoInput(true);
+		connection.setDoOutput(true);
+		//第四步：组织SOAP数据，发送请求
+		//将信息以流的方式发送出去
+		OutputStream os = connection.getOutputStream();
+		os.write(soapXML.getBytes());
+		StringBuilder sb = new StringBuilder();
+		//第五步：接收服务端响应，打印
+		int responseCode = connection.getResponseCode();
+		if(200 == responseCode){//表示服务端响应成功
+			//获取当前连接请求返回的数据流
+			InputStream is = connection.getInputStream();
+			InputStreamReader isr = new InputStreamReader(is);
+			BufferedReader br = new BufferedReader(isr);
+		
+			// StringBuilder sb = new StringBuilder();
+			String temp = null;
+			while(null != (temp = br.readLine())){
+				sb.append(temp);
+			}
+			is.close();
+			isr.close();
+			br.close();
+		}
+		os.close();
+		return sb.toString();
+	}
+	public static void main(String[] args) {
+		
+		String cityName = "贵港";
+		String postUrl = "http://www.webxml.com.cn/WebServices/WeatherWebService.asmx?wsdl";
+		String soapXml = "<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:web=\"http://WebXml.com.cn/\">\r\n" + 
+				"   <soap:Header/>\r\n" + 
+				"   <soap:Body>\r\n" + 
+				"      <web:getSupportCity>\r\n" + 
+				"         <!--Optional:-->\r\n" + 
+				"         <web:byProvinceName>广西</web:byProvinceName>\r\n" + 
+				"      </web:getSupportCity>\r\n" + 
+				"   </soap:Body>\r\n" + 
+				"</soap:Envelope>";
+		String soapAction = "http://WebXml.com.cn/getSupportCity";
+		String result = doPostSoap(postUrl,soapXml,soapAction);
+		System.out.println(result);
+	}
+}
+
