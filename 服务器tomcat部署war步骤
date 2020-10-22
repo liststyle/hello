@@ -1,0 +1,6 @@
+1.将打好的war包放到webapps下面；
+2.配置server.xml文件，在最后面的HOST节点配置一行<Context path="/filefactory-dd" 
+		        docBase="filefactory20201022.war"  
+              reloadable="true"/>
+说明：path是指访问项目的上下文，docBase是指放在webapps下的应用
+3.上面两部做好之后就可以启动tomcat了
